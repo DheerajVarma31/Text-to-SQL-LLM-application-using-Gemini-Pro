@@ -8,6 +8,10 @@ import google.generativeai as genai
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+for model in genai.list_models():
+    print(model.name)
+
+
 # Prompt instructions for Gemini
 prompt_template = """
 You are an expert at translating natural language to SQL.
