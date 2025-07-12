@@ -5,6 +5,8 @@ import streamlit as st
 import os
 import sqlite3
 import google.generativeai as genai
+print(genai.__version__)
+
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
