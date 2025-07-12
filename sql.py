@@ -34,7 +34,7 @@ Please return only the SQL query.
 """
 
 def get_gemini_response(question: str) -> str:
-    model = genai.GenerativeModel("gemini-pro")
+    model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
     full_prompt = f"{prompt_template}\n\nQ: {question}\nA:"
     response = model.generate_content(full_prompt)
     return response.text.strip()
