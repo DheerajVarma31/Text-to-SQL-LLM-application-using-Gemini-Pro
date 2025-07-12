@@ -1,28 +1,41 @@
 import sqlite3
 
-## connect to SQLite
-connection=sqlite3.connect('student.db')
+# ✅ Connect to SQLite (creates the DB if it doesn't exist)
+connection = sqlite3.connect('student.db')
 
-## create a cursor to insert records,create tables etc.
-cursor=connection.cursor()
+# ✅ Create a cursor for executing SQL commands
+cursor = connection.cursor()
 
-## create a table
-table_info="""
-Create table STUDENT(NAME VARCHAR(25),CLASS VARCHAR(25),
-SECTION VARCHAR(25));
+# ✅ Drop the table if it already exists (optional reset)
+cursor.execute("DROP TABLE IF EXISTS STUDENT")
 
+# ✅ Create the STUDENT table
+table_info = """
+CREATE TABLE STUDENT (
+    NAME VARCHAR(25),
+    CLASS VARCHAR(25),
+    SECTION VARCHAR(25)
+);
 """
 cursor.execute(table_info)
 
-## insert records
-cursor.execute('''Insert into STUDENT values('Dheeraj','B.Tech','CSE')''')
-cursor.execute('''Insert into STUDENT values('Suresh','B.Tech','CSE')''')
-cursor.execute('''Insert into STUDENT values('Ramesh','B.Tech','CSE')''')
-cursor.execute('''Insert into STUDENT values('Naveen','B.Tech','Mechanical')''')
-cursor.execute('''Insert into STUDENT values('Prem chand','M.Tech','Electrical')''')
+# ✅ Insert student records
+students = [
+    ('Dheeraj', 'B.Tech', 'CSE'),
+    ('Suresh', 'B.Tech', 'CSE'),
+    ('Ramesh', 'B.Tech', 'CSE'),
+    ('Naveen', 'B.Tech', 'Mechanical'),
+    ('Prem chand', 'M.Tech', 'Electrical')
+]
 
-# Display the records
-print("Records in STUDENT table:")
-data=cursor.execute('''Select * from STUDENT''')
+cursor.executemany("INSERT INTO STUDENT (NAME, CLASS, SECTION) VALUES (?, ?, ?)", students)
+connection.commit()
+
+# ✅ Display inserted records
+print("📄 Records in STUDENT table:")
+data = cursor.execute("SELECT * FROM STUDENT")
 for row in data:
     print(row)
+
+# ✅ Close the connection
+connection.close()

@@ -1,73 +1,63 @@
-from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env
-
 import streamlit as st
-import os
 import sqlite3
+import os
+from dotenv import load_dotenv
 import google.generativeai as genai
-print(genai.__version__)
 
-
-# Configure Gemini API
+# Load .env variables
+load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Function to call Gemini and get SQL from a natural language question
-def get_gemini_response(question, prompt):
-    model = genai.GenerativeModel(model_name="gemini-pro")
-    full_prompt = prompt[0] + "\n\nQuestion: " + question
+# Prompt instructions for Gemini
+prompt_template = """
+You are an expert at translating natural language to SQL.
+You are working with a table called STUDENT with the following columns:
+- NAME
+- CLASS
+- SECTION
+
+Examples:
+Q: How many students are there?
+A: SELECT COUNT(*) FROM STUDENT;
+
+Q: Show all students from CSE section.
+A: SELECT * FROM STUDENT WHERE SECTION = 'CSE';
+
+Q: Show students from class 3A
+A: SELECT * FROM STUDENT WHERE CLASS = '3A';
+
+Please return only the SQL query.
+"""
+
+def get_gemini_response(question: str) -> str:
+    model = genai.GenerativeModel("gemini-pro")
+    full_prompt = f"{prompt_template}\n\nQ: {question}\nA:"
     response = model.generate_content(full_prompt)
     return response.text.strip()
 
-# Function to execute SQL query and return results
-def read_sql_query(sql, db):
-    try:
-        conn = sqlite3.connect(db)
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-        conn.close()
-        return rows
-    except Exception as e:
-        return [("SQL Error", str(e))]
+def run_query(query: str, db_path: str = "student.db"):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    col_names = [description[0] for description in cursor.description]
+    conn.close()
+    return col_names, rows
 
-# Prompt for Gemini
-prompt = [
-    """
-    You are an expert in converting English questions to SQL code.
-    The SQL database is named STUDENT and has the following columns:
-    NAME, CLASS, SECTION.
-
-    Example 1:
-    Question - How many entries of records are present?
-    SQL - SELECT COUNT(*) FROM STUDENT;
-
-    Example 2:
-    Question - Tell me all the students studying in CSE section?
-    SQL - SELECT * FROM STUDENT WHERE SECTION='CSE';
-
-    Please only return the SQL code without explanations, no ```sql or other wrappers.
-    """
-]
-
-# Streamlit UI
-st.set_page_config(page_title="SQL Query Generator")
+# Streamlit App UI
+st.set_page_config(page_title="🧠 Gemini + SQL Query App")
 st.title("🧠 Gemini + SQL Query App")
-st.write("Ask a natural language question, and I'll query the database for you!")
+st.markdown("Ask a natural language question, and I'll query the database for you!")
 
 question = st.text_input("Your Question:")
-submit = st.button("Submit")
+if st.button("Submit"):
+    if question:
+        try:
+            sql_query = get_gemini_response(question)
+            st.code(sql_query, language="sql")
 
-if submit and question:
-    with st.spinner("Generating SQL query..."):
-        sql_query = get_gemini_response(question, prompt)
-        st.code(sql_query, language="sql")
-
-    with st.spinner("Fetching data from database..."):
-        result_rows = read_sql_query(sql_query, "student.db")
-
-    st.subheader("Results:")
-    if result_rows:
-        for row in result_rows:
-            st.write(row)
-    else:
-        st.warning("No results found or invalid query.")
+            cols, result = run_query(sql_query)
+            st.success("Query executed successfully!")
+            st.dataframe(result, use_container_width=True, columns=cols)
+        except Exception as e:
+            st.error(f"Error: {e}")
